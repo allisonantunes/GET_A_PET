@@ -144,8 +144,10 @@ module.exports = class UserController {
 
         const {name, email, phone, password, confirmpassword} = req.body
 
-        let image = ''
-
+        // o molter ja vai alterar o nome da image
+        if(req.file) { // arquivos vem por req.file
+            user.image = req.file.filename
+        }
         // validation
 
         if(!name) {
@@ -171,11 +173,34 @@ module.exports = class UserController {
         if(!phone) {
             res.status(422).json({ message: 'O telefone é obrigatorio'})
             return
+
+        user.phone = phone
         }
-        if(!password) {
-            res.status(422).json({ message: 'A senha é Obrigatorio'})
+        if(password != confirmpassword) {
+            res.status(422).json({ message: 'As senhas não conferem'})
+            return
+        } else if(password === confirmpassword && password !=null) {
+            // creating password
+            const salt = await bcrypt.genSalt(12)
+            const passwordHash = await bcrypt.hash(password, salt)
+
+            user.password = passwordHash
+        }
+        try {
+
+            await User.findOneAndUpdate(
+                {_id: user._id}, // filtro
+                {$set: user}, // quais dados será atualizados
+                {new: true}, // parametro para fazer a atualizacao de dado com sucesso
+            )
+
+            res.status(200).json({message: 'Usuario atualizado com sucesso'})
+
+        } catch (error) {
+            res.status(500).json({message: error})
             return
         }
+        /*
         if(!confirmpassword) {
             res.status(422).json({ message: 'A confirmação de senha é obrigatorio'})
             return
@@ -184,6 +209,6 @@ module.exports = class UserController {
             res.status(422).json({ message: 'A senha e a confirmação de senhas precisam ser iguais'})
             return
         }
-
+        */
     }
 }
